@@ -199,7 +199,59 @@ sequenceDiagram
 
 ---
 
-## 🚦 Usage Guide
+## � How It Works
+
+### Detailed System Operation
+
+The Technical ATS Resume Expert operates through a sophisticated multi-stage pipeline that combines advanced AI processing with robust data handling:
+
+#### 1. **📄 PDF Processing Pipeline**
+- **PyMuPDF (fitz)** extracts text and converts pages to high-resolution images
+- **Pillow** handles image optimization and base64 encoding for AI consumption
+- **Error handling** validates file integrity, size limits, and format compatibility
+- **Text extraction** preserves formatting while cleaning special characters
+
+#### 2. **🤖 AI Analysis Engine**
+- **Google Gemini-2.5-Flash** processes resume content with specialized prompts
+- **Context-aware prompts** tailored for resume analysis, ATS optimization, and skill assessment
+- **Multi-turn conversations** allow for detailed analysis across different dimensions
+- **Response parsing** structures AI output into actionable insights
+
+#### 3. **📊 Visualization & Analytics**
+- **Matplotlib** generates interactive charts showing skill gaps and match percentages
+- **Streamlit components** create responsive pie charts, progress bars, and metric cards
+- **Real-time updates** reflect analysis results instantly in the user interface
+- **Export functionality** allows users to download detailed reports
+
+#### 4. **🛡️ Security & Configuration**
+- **python-dotenv** manages sensitive API keys through environment variables
+- **Logging system** tracks operations, errors, and performance metrics
+- **Input validation** prevents malicious file uploads and ensures data integrity
+- **Stateless design** ensures no user data is permanently stored
+
+### Technology Roles & Responsibilities
+
+| Component | Technology | Specific Function | Why Essential |
+|-----------|------------|-------------------|---------------|
+| **Frontend** | Streamlit | Web interface, file uploads, result display | Python-native, rapid development |
+| **PDF Engine** | PyMuPDF | Text extraction, image conversion | Superior accuracy vs. alternatives |
+| **AI Core** | Gemini-2.5-Flash | Natural language processing, analysis | Latest model, cost-effective API |
+| **Charts** | Matplotlib | Data visualization, chart generation | Seamless Streamlit integration |
+| **Config** | python-dotenv | Environment management, API keys | Security best practices |
+| **Images** | Pillow | Image processing, format conversion | Industry standard, reliable |
+
+### Processing Flow Explained
+
+```
+📄 PDF Upload → 🔍 Validation → 📊 Text Extraction → 🤖 AI Analysis → 📈 Visualization → 📥 Export
+```
+
+1. **Input Stage**: Streamlit handles file upload and validates PDF format/size
+2. **Processing Stage**: PyMuPDF extracts text while Pillow converts to images
+3. **Analysis Stage**: Gemini AI processes content using specialized prompts
+4. **Output Stage**: Matplotlib generates charts and Streamlit displays results
+
+## �🚦 Usage Guide
 
 ### Step-by-Step Process
 
@@ -277,21 +329,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-## 👨‍💻 Developer
-
-<div align="center">
-
-**Built with ❤️ by [Arham Khan](https://github.com/ivocreates)**
-
-🌐 **Portfolio**: [ivocreates.site](https://ivocreates.site/) | 📧 **Contact**: [GitHub](https://github.com/ivocreates)
-
-![Profile Views](https://komarev.com/ghpvc/?username=ivocreates&color=blue&style=flat-square)
-
-</div>
-
----
-
-## 🙏 Acknowledgments
+##  Acknowledgments
 
 - **Google AI** - Gemini API platform
 - **Streamlit Team** - Web framework

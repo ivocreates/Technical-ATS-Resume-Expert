@@ -1,5 +1,7 @@
-streamlit
-google-generativeai
-python-dotenv
-matplotlib
-pymupdf
+streamlit==1.29.0
+google-generativeai==0.8.3
+python-dotenv==1.0.0
+matplotlib==3.8.2
+pymupdf==1.23.18
+pillow==10.1.0
+pathlib

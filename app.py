@@ -1,174 +1,341 @@
+"""
+Technical ATS Resume Expert - Optimized Version
+A comprehensive resume analysis tool powered by Google Gemini AI.
+"""
 import streamlit as st
-import base64
-import os
-import io
-import re
-import fitz  # PyMuPDF
 import matplotlib.pyplot as plt
-from PIL import Image
-from dotenv import load_dotenv
-import google.generativeai as genai
+import os
+import sys
+from pathlib import Path
 
-# Load environment variables
-load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+# Add src directory to Python path
+sys.path.append(str(Path(__file__).parent / "src"))
 
-# Functions
-def get_gemini_response(input, pdf_content, prompt):
-    model = genai.GenerativeModel('gemini-2.5-flash')
-    response = model.generate_content([input, pdf_content[0], prompt])
-    return response.text
+from src.config import Config
+from src.utils import PDFProcessor, TextAnalyzer
+from src.ai_service import GeminiService, PromptManager
+from src.visualization import ChartGenerator, UIComponents
 
+# Initialize configuration and services
+Config.validate_config()
+logger = Config.setup_logging()
 
-def input_pdf_setup(uploaded_file):
-    if uploaded_file is not None:
-        # Read the uploaded PDF file
-        with fitz.open(stream=uploaded_file.read(), filetype="pdf") as pdf_doc:
-            # Get the first page as an image
-            first_page = pdf_doc[0].get_pixmap()
-            img_byte_arr = io.BytesIO(first_page.tobytes("jpeg"))
-            return Image.open(img_byte_arr), base64.b64encode(img_byte_arr.getvalue()).decode()
-    else:
-        raise FileNotFoundError("No file uploaded")
+# Initialize services
+gemini_service = GeminiService()
+pdf_processor = PDFProcessor()
+text_analyzer = TextAnalyzer()
+chart_generator = ChartGenerator()
+ui = UIComponents()
 
-def extract_match_percentage(response_text):
-    match = re.search(r"Match Percentage:\s*(\d+)%", response_text)
-    if match:
-        return int(match.group(1))
-    else:
-        return 0
+def main():
+    """Main application function."""
+    
+    # Streamlit page configuration
+    st.set_page_config(
+        page_title=Config.APP_TITLE,
+        page_icon="📄",
+        layout="wide",
+        initial_sidebar_state="collapsed"
+    )
+    
+    # Custom CSS styling
+    st.markdown("""
+        <style>
+        .main-header {
+            text-align: center;
+            color: #1f77b4;
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        .feature-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1.5rem;
+            border-radius: 15px;
+            color: white;
+            margin: 1rem 0;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .metric-container {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+            margin: 1rem 0;
+        }
+        .stButton > button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 0.75rem 2rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .stButton > button:hover {
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transform: translateY(-2px);
+        }
+        .sidebar .sidebar-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    # Application header
+    st.markdown('<h1 class="main-header">🚀 Technical ATS Resume Expert</h1>', unsafe_allow_html=True)
+    
+    # Feature overview
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>📊 Resume Analysis</h3>
+                <p>Get detailed insights about your resume's strengths and weaknesses</p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>🎯 ATS Matching</h3>
+                <p>Check how well your resume matches job descriptions</p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+            <div class="feature-box">
+                <h3>📈 Skill Enhancement</h3>
+                <p>Receive personalized recommendations for skill improvement</p>
+            </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # Sidebar for application info
+    with st.sidebar:
+        st.header("📋 Application Info")
+        st.info("""
+        **Technical ATS Resume Expert** helps you optimize your resume for:
+        
+        ✅ Applicant Tracking Systems (ATS)  
+        ✅ Technical job requirements  
+        ✅ Industry-specific skills  
+        ✅ Career advancement  
+        
+        **Powered by Google Gemini AI**
+        """)
+        
+        st.header("🔧 Features")
+        st.markdown("""
+        - **Smart Resume Analysis**
+        - **ATS Compatibility Check**
+        - **Skill Gap Identification**
+        - **Career Recommendations**
+        - **Visual Analytics**
+        """)
+    
+    # Main input section
+    st.header("📝 Input Section")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        job_description = st.text_area(
+            "Job Description",
+            height=200,
+            placeholder="Paste the job description here...",
+            help="Enter the complete job description to get accurate analysis"
+        )
+    
+    with col2:
+        uploaded_file = st.file_uploader(
+            "Upload Resume (PDF)",
+            type=["pdf"],
+            help="Upload your resume in PDF format (max 10MB)"
+        )
+        
+        if uploaded_file:
+            ui.display_success_message(f"File uploaded: {uploaded_file.name}")
+            st.info(f"📄 File size: {uploaded_file.size / 1024:.1f} KB")
+    
+    # Action buttons
+    st.header("🚀 Analysis Actions")
+    
+    button_col1, button_col2, button_col3 = st.columns(3)
+    
+    with button_col1:
+        analyze_resume = st.button("📊 Analyze Resume", use_container_width=True)
+    
+    with button_col2:
+        improve_skills = st.button("📈 Improve Skills", use_container_width=True)
+    
+    with button_col3:
+        match_resume = st.button("🎯 Match with Job", use_container_width=True)
+    
+    # Process user actions
+    if analyze_resume:
+        handle_resume_analysis(job_description, uploaded_file)
+    
+    elif improve_skills:
+        handle_skill_improvement(job_description, uploaded_file)
+    
+    elif match_resume:
+        handle_resume_matching(job_description, uploaded_file)
 
-def draw_pie_chart(match_percentage):
-    fig, ax = plt.subplots()
-    labels = ['Match', 'Remaining']
-    sizes = [match_percentage, 100 - match_percentage]
-    colors = ['#4CAF50', '#FF5733']
-    explode = (0.1, 0)
-    ax.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%',
-           shadow=True, startangle=90)
-    ax.axis('equal')
-    return fig
+def handle_resume_analysis(job_description: str, uploaded_file):
+    """Handle resume analysis workflow."""
+    
+    if not validate_inputs(job_description, uploaded_file):
+        return
+    
+    # Process PDF
+    pdf_image, pdf_base64 = pdf_processor.process_pdf(uploaded_file)
+    if not pdf_image or not pdf_base64:
+        return
+    
+    # Get AI response
+    response = gemini_service.generate_response(
+        job_description, 
+        pdf_base64, 
+        PromptManager.get_prompt('analysis')
+    )
+    
+    if response:
+        st.header("📊 Resume Analysis Results")
+        
+        # Display resume image
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.image(pdf_image, caption="📄 Resume Preview", use_container_width=True)
+        
+        with col2:
+            st.markdown("### 🔍 Detailed Analysis")
+            st.markdown(response)
+        
+        # Download option
+        ui.create_download_button(
+            response, 
+            "resume_analysis.txt", 
+            "📥 Download Analysis Report"
+        )
 
-# Streamlit Configuration
-st.set_page_config(page_title="Technical ATS Resume Expert")
+def handle_skill_improvement(job_description: str, uploaded_file):
+    """Handle skill improvement workflow."""
+    
+    if not validate_inputs(job_description, uploaded_file):
+        return
+    
+    # Process PDF
+    pdf_image, pdf_base64 = pdf_processor.process_pdf(uploaded_file)
+    if not pdf_image or not pdf_base64:
+        return
+    
+    # Get AI response
+    response = gemini_service.generate_response(
+        job_description, 
+        pdf_base64, 
+        PromptManager.get_prompt('improvement')
+    )
+    
+    if response:
+        st.header("📈 Skill Improvement Suggestions")
+        
+        col1, col2 = st.columns([1, 2])
+        
+        with col1:
+            st.image(pdf_image, caption="📄 Resume Preview", use_container_width=True)
+        
+        with col2:
+            st.markdown("### 🎯 Personalized Recommendations")
+            st.markdown(response)
+        
+        # Download option
+        ui.create_download_button(
+            response, 
+            "skill_improvement_plan.txt", 
+            "📥 Download Improvement Plan"
+        )
 
-# Page Styling
-st.markdown(
-    """
-    <style>
-    body {
-        background-image: url('gradient-blur.png');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }
-    h1 {
-        text-align: center;
-        color: white;
-        font-size: 2.5em;
-    }
-    </style>
-    """, unsafe_allow_html=True
-)
-
-st.markdown("<h1 style='text-align: center; color: black;'>Technical Resume Expert</h1>", unsafe_allow_html=True)
-
-# Inputs
-input_text = st.text_area("Job Description: ", key="input")
-uploaded_file = st.file_uploader("Upload your resume (PDF)...", type=["pdf"])
-
-if uploaded_file is not None:
-    st.write("PDF Uploaded Successfully!")
-
-# Buttons
-submit1 = st.button("Analyse Resume")
-submit2 = st.button("How Can I Improvise my Skills?")
-submit3 = st.button("Match Resume with Job Description")
-
-# Prompts
-input_prompt1 = """
-You are an experienced Technical HR Manager with expertise in talent acquisition and recruitment for technology, finance, and business roles. Your task is to conduct a detailed evaluation of the provided resume against the job description.
-
-Alignment with Job Requirements: Analyze the resume to identify key skills, qualifications, and experiences that match the job requirements. Highlight areas where the candidate excels in fulfilling the role's technical, financial, or business-related expectations.
-
-Strengths: Enumerate the candidate's core strengths, including technical skills, domain knowledge, certifications, achievements, or relevant experiences that align closely with the job description.
-
-Weaknesses: Point out any notable gaps or areas where the candidate's profile does not meet the job requirements, such as missing skills, insufficient experience, or lack of relevant certifications.
-
-Overall Fit: Provide a professional assessment of how well the candidate fits the role, considering both strengths and weaknesses. Offer an overall recommendation (e.g., highly suitable, moderately suitable, not suitable) and explain your reasoning.
-
-Ensure your evaluation is specific, clear, and actionable, taking into account the nuances of the job role and industry requirements.
-"""
-
-input_prompt2 = """
-You are a highly experienced Technical Career Advisor with deep expertise in the fields of Data Science, Web Development, Big Data Engineering, DevOps, and other technical domains. Your task is to provide detailed, actionable, and personalized guidance to help the individual improve their skills and advance their career based on the provided resume and job description.
-
-1. **Skill Gap Analysis**: Identify the specific skills, technologies, tools, or certifications that are missing from the candidate's resume but are crucial for excelling in the specified job role.
-
-2. **Recommended Learning Path**: Suggest practical steps the candidate can take to acquire the missing skills, such as:
-   - Online courses or certifications (e.g., Coursera, Udemy, or official vendor certifications like AWS, Azure, or Google Cloud).
-   - Projects or hands-on experiences that can help them gain expertise.
-   - Open-source contributions or internships for real-world exposure.
-
-3. **Emerging Trends and Technologies**: Highlight any emerging trends, tools, or frameworks in the industry that the candidate should explore to stay competitive and future-proof their career.
-
-4. **Improvement in Soft Skills**: If applicable, suggest areas where the candidate can improve soft skills (e.g., communication, teamwork, or leadership) that are essential for success in their chosen domain.
-
-5. **Overall Guidance**: Provide a summary of the top three actionable steps the candidate should prioritize to achieve significant improvement in their profile.
-
-Ensure that your response is specific to the candidate's field and the role described in the job description. Provide clear, concise, and actionable advice that the candidate can immediately apply to improve their skills and career prospects.
-"""
-
-input_prompt3 = """
-You are a skilled and advanced ATS (Applicant Tracking System) scanner, designed with deep functionality and specialized expertise in roles such as Data Science, Web Development, Big Data Engineering, and DevOps. Your task is to evaluate the provided resume against the job description thoroughly.
-
-Matching Percentage: Analyze the resume and provide a precise percentage score indicating how well the candidate's profile aligns with the job description.
-
-Missing Keywords: Identify and list any critical skills, technologies, tools, certifications, or keywords mentioned in the job description that are absent from the resume.
-
-Final Thoughts: Provide a brief, insightful summary of your evaluation, including the candidate's overall suitability for the role, highlighting both key strengths and gaps.
-
-Output Structure:
-
-Match Percentage(bold): XX%
-Missing Keywords(bold): 
-[List missing skills/tools/keywords]
-Final Thoughts(bold): 
-[Provide a short summary of strengths and weaknesses and a recommendation if possible.]
-"""
-
-# Actions
-if submit1:
-    if uploaded_file is not None:
-        pdf_image, pdf_base64 = input_pdf_setup(uploaded_file)
-        response = get_gemini_response(input_text, [{"mime_type": "image/jpeg", "data": pdf_base64}], input_prompt1)
-        st.subheader("Analysis")
-        st.write(response)
-    else:
-        st.write("Please upload your resume!")
-
-elif submit2:
-    if uploaded_file is not None:
-        pdf_image, pdf_base64 = input_pdf_setup(uploaded_file)
-        response = get_gemini_response(input_text, [{"mime_type": "image/jpeg", "data": pdf_base64}], input_prompt2)
-        st.subheader("Improvement Suggestions")
-        st.write(response)
-    else:
-        st.write("Please upload your resume!")
-
-elif submit3:
-    if uploaded_file is not None:
-        pdf_image, pdf_base64 = input_pdf_setup(uploaded_file)
-        response = get_gemini_response(input_text, [{"mime_type": "image/jpeg", "data": pdf_base64}], input_prompt3)
-        match_percentage = extract_match_percentage(response)
+def handle_resume_matching(job_description: str, uploaded_file):
+    """Handle resume matching workflow."""
+    
+    if not validate_inputs(job_description, uploaded_file):
+        return
+    
+    # Process PDF
+    pdf_image, pdf_base64 = pdf_processor.process_pdf(uploaded_file)
+    if not pdf_image or not pdf_base64:
+        return
+    
+    # Get AI response
+    response = gemini_service.generate_response(
+        job_description, 
+        pdf_base64, 
+        PromptManager.get_prompt('matching')
+    )
+    
+    if response:
+        # Extract match percentage
+        match_percentage = text_analyzer.extract_match_percentage(response)
+        
+        st.header("🎯 Resume Matching Results")
+        
+        # Display key metrics
+        metric_col1, metric_col2, metric_col3 = st.columns(3)
+        ui.display_metrics(metric_col1, metric_col2, metric_col3, match_percentage, 100, 100 - match_percentage)
+        
+        # Main content layout
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.image(pdf_image, caption="📄 Resume Preview", use_container_width=True)
+        
+        with col2:
+            st.subheader("📊 Match Percentage Visualization")
+            pie_chart = chart_generator.create_match_pie_chart(match_percentage)
+            if pie_chart:
+                st.pyplot(pie_chart)
+                plt.close(pie_chart)  # Properly close the figure
+        
+        # Detailed analysis
+        st.markdown("### 📋 Detailed Matching Analysis")
+        st.markdown(response)
+        
+        # Download options
         col1, col2 = st.columns(2)
         with col1:
-            st.image(pdf_image, caption="Resume First Page", use_container_width=True)
+            ui.create_download_button(
+                response, 
+                "matching_analysis.txt", 
+                "📥 Download Match Report"
+            )
+        
         with col2:
-            st.subheader("Match Percentage")
-            pie_chart = draw_pie_chart(match_percentage)
-            st.pyplot(pie_chart)
-        st.subheader("Detailed Analysis")
-        st.write(response)
-    else:
-        st.write("Please upload your resume!")
+            if pie_chart:
+                # Save chart as image for download (optional feature)
+                st.info("💡 Chart visualization displayed above")
+
+def validate_inputs(job_description: str, uploaded_file) -> bool:
+    """Validate user inputs."""
+    
+    if not text_analyzer.validate_job_description(job_description):
+        return False
+    
+    if not uploaded_file:
+        ui.display_error_message("Please upload your resume (PDF format)")
+        return False
+    
+    return True
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        st.error(f"❌ Application Error: {str(e)}")
+        st.info("Please refresh the page and try again.")
+        logger.error(f"Application error: {str(e)}")

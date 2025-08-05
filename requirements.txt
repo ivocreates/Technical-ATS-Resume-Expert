@@ -1,7 +1,6 @@
-streamlit==1.29.0
-google-generativeai==0.8.3
-python-dotenv==1.0.0
-matplotlib==3.8.2
-pymupdf==1.23.18
-pillow==10.1.0
-pathlib
+streamlit>=1.25.0,<1.30.0
+google-generativeai>=0.3.0
+python-dotenv>=1.0.0
+matplotlib>=3.7.0
+pymupdf>=1.23.0
+pillow>=10.0.0

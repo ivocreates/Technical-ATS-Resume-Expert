@@ -37,6 +37,11 @@ class Config:
     @classmethod
     def setup_logging(cls):
         """Setup application logging."""
+        import os
+        
+        # Create logs directory if it doesn't exist
+        os.makedirs('logs', exist_ok=True)
+        
         logging.basicConfig(
             level=logging.INFO,
             format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',

@@ -168,13 +168,13 @@ def main():
     button_col1, button_col2, button_col3 = st.columns(3)
     
     with button_col1:
-        analyze_resume = st.button("📊 Analyze Resume", use_container_width=True)
+        analyze_resume = st.button("📊 Analyze Resume")
     
     with button_col2:
-        improve_skills = st.button("📈 Improve Skills", use_container_width=True)
+        improve_skills = st.button("📈 Improve Skills")
     
     with button_col3:
-        match_resume = st.button("🎯 Match with Job", use_container_width=True)
+        match_resume = st.button("🎯 Match with Job")
     
     # Process user actions
     if analyze_resume:
@@ -211,7 +211,7 @@ def handle_resume_analysis(job_description: str, uploaded_file):
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            st.image(pdf_image, caption="📄 Resume Preview", use_container_width=True)
+            st.image(pdf_image, caption="📄 Resume Preview", width=400)
         
         with col2:
             st.markdown("### 🔍 Detailed Analysis")
@@ -248,7 +248,7 @@ def handle_skill_improvement(job_description: str, uploaded_file):
         col1, col2 = st.columns([1, 2])
         
         with col1:
-            st.image(pdf_image, caption="📄 Resume Preview", use_container_width=True)
+            st.image(pdf_image, caption="📄 Resume Preview", width=400)
         
         with col2:
             st.markdown("### 🎯 Personalized Recommendations")
@@ -293,7 +293,7 @@ def handle_resume_matching(job_description: str, uploaded_file):
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            st.image(pdf_image, caption="📄 Resume Preview", use_container_width=True)
+            st.image(pdf_image, caption="📄 Resume Preview", width=400)
         
         with col2:
             st.subheader("📊 Match Percentage Visualization")

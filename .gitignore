@@ -136,6 +136,18 @@ ENV/
 env.bak/
 venv.bak/
 
+# Application specific
+logs/
+*.log
+temp/
+tmp/
+.streamlit/
+
+# OS specific
+.DS_Store
+Thumbs.db
+desktop.ini
+
 # Spyder project settings
 .spyderproject
 .spyproject
